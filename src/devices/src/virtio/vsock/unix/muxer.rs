@@ -46,6 +46,7 @@ use super::muxer_killq::MuxerKillQ;
 use super::muxer_rxq::MuxerRxQ;
 use super::MuxerConnection;
 use super::{Error, Result};
+use logger::{Metric, METRICS};
 
 /// A unique identifier of a `MuxerConnection` object. Connections are stored in a hash map,
 /// keyed by a `ConnMapKey` object.
@@ -170,6 +171,8 @@ impl VsockChannel for VsockMuxer {
                 }
 
                 debug!("vsock muxer: RX pkt: {:?}", pkt.hdr());
+                METRICS.vsock.rx_packets_count.inc();
+                METRICS.vsock.rx_bytes_count.add(pkt.len() as usize);
                 return Ok(());
             }
         }
@@ -196,6 +199,8 @@ impl VsockChannel for VsockMuxer {
             self.rxq.len(),
             pkt.hdr()
         );
+        METRICS.vsock.tx_packets_count.inc();
+        METRICS.vsock.tx_bytes_count.add(pkt.len() as usize);
 
         // If this packet has an unsupported type (!=stream), we must send back an RST.
         //
@@ -462,6 +467,7 @@ impl VsockMuxer {
         //   termination.
         self.sweep_killq();
 
+        METRICS.vsock.conns_added.inc();
         if self.conn_map.len() >= defs::MAX_CONNECTIONS {
             info!(
                 "vsock: muxer connection limit reached ({})",
@@ -491,6 +497,7 @@ impl VsockMuxer {
 
     /// Remove a connection from the active connection poll.
     fn remove_connection(&mut self, key: ConnMapKey) {
+        METRICS.vsock.conns_removed.inc();
         if let Some(conn) = self.conn_map.remove(&key) {
             self.remove_listener(conn.get_polled_fd());
         }
@@ -502,6 +509,8 @@ impl VsockMuxer {
     /// it an RST packet.
     fn kill_connection(&mut self, key: ConnMapKey) {
         let mut had_rx = false;
+        METRICS.vsock.conns_killed.inc();
+
         self.conn_map.entry(key).and_modify(|conn| {
             had_rx = conn.has_pending_rx();
             conn.kill();
@@ -726,6 +735,7 @@ impl VsockMuxer {
 
         if self.killq.is_empty() && !self.killq.is_synced() {
             self.killq = MuxerKillQ::from_conn_map(&self.conn_map);
+            METRICS.vsock.killq_resync.inc();
             // If we've just re-created the kill queue, we can sweep it again; maybe there's
             // more to kill.
             self.sweep_killq();
@@ -765,6 +775,30 @@ mod tests {
     const PEER_CID: u64 = 3;
     const PEER_BUF_ALLOC: u32 = 64 * 1024;
 
+    fn print_data(prefix: &str) {
+        println!("\n[{}] rx_bytes_count {}", prefix, METRICS.vsock.rx_bytes_count.count());
+        println!("[{}] tx_bytes_count {}", prefix, METRICS.vsock.tx_bytes_count.count());
+
+        println!("[{}] rx_packets_count {}", prefix, METRICS.vsock.rx_packets_count.count());
+        println!("[{}] tx_packets_count {}", prefix, METRICS.vsock.tx_packets_count.count());
+
+        println!("[{}] rx_queue_errors {}", prefix, METRICS.vsock.rx_queue_errors.count());
+        println!("[{}] tx_queue_errors {}", prefix, METRICS.vsock.tx_queue_errors.count());
+
+        println!("[{}] rx_queue_events {}", prefix, METRICS.vsock.rx_queue_events.count());
+        println!("[{}] tx_queue_events {}", prefix, METRICS.vsock.tx_queue_events.count());
+
+        println!("[{}] conns_added {}", prefix, METRICS.vsock.conns_added.count());
+        println!("[{}] conns_killed {}", prefix, METRICS.vsock.conns_killed.count());
+        println!("[{}] conns_removed {}", prefix, METRICS.vsock.conns_removed.count());
+
+        println!("[{}] killq_resync {}", prefix, METRICS.vsock.killq_resync.count());
+
+        println!("[{}] extra_txq_allocs {}", prefix, METRICS.vsock.extra_txq_allocs.count());
+        println!("[{}] epoll_io_errors {}", prefix, METRICS.vsock.epoll_io_errors.count());
+        println!("[{}] epoll_register_errors {}", prefix, METRICS.vsock.epoll_register_errors.count());
+    }
+
     struct MuxerTestContext {
         _vsock_test_ctx: VsockTestContext,
         pkt: VsockPacket,
@@ -773,6 +807,7 @@ mod tests {
 
     impl Drop for MuxerTestContext {
         fn drop(&mut self) {
+            print_data("end");
             std::fs::remove_file(self.muxer.host_sock_path.as_str()).unwrap();
         }
     }
@@ -787,7 +822,7 @@ mod tests {
             .unwrap();
             let uds_path = format!("test_vsock_{}.sock", name);
             let muxer = VsockMuxer::new(PEER_CID, uds_path).unwrap();
-
+            print_data("start");
             Self {
                 _vsock_test_ctx: vsock_test_ctx,
                 pkt,
@@ -1265,6 +1300,8 @@ mod tests {
             csm_defs::CONN_SHUTDOWN_TIMEOUT_MS,
         ));
 
+        let killq_resync_cnt = METRICS.vsock.killq_resync.count();
+        let conns_killed_cnt = METRICS.vsock.conns_killed.count();
         // Trigger a kill queue sweep, by requesting a new connection.
         ctx.init_pkt(
             local_port,
@@ -1272,6 +1309,9 @@ mod tests {
             uapi::VSOCK_OP_REQUEST,
         );
         ctx.send();
+        // Check that connection kill related metrics have been incremented
+        assert_eq!(METRICS.vsock.killq_resync.count(), killq_resync_cnt + 1);
+        assert_eq!(METRICS.vsock.conns_killed.count(), conns_killed_cnt + defs::MUXER_KILLQ_SIZE);
 
         // After sweeping the kill queue, it should now be synced (assuming the RX queue is larger
         // than the kill queue, since an RST packet will be queued for each killed connection).
@@ -1292,5 +1332,90 @@ mod tests {
         assert_eq!(ctx.pkt.dst_port(), peer_port_last as u32 + 1);
 
         assert!(!ctx.muxer.has_pending_rx());
+    }
+
+    #[test]
+    fn test_rx_bytes_metrics() {
+        let mut ctx = MuxerTestContext::new("rx_bytes_metrics");
+        let peer_port = 1025;
+        let nb_pkts = 10; // How many of packets to receive
+        let to_recv = [1, 2, 3]; // Payload to receive
+
+        // Get current packet and bytes count
+        let crt_rx_pkts = METRICS.vsock.rx_packets_count.count();
+        let crt_rx_bytes = METRICS.vsock.rx_bytes_count.count();
+
+        // Create a connection
+        let (mut stream, _) = ctx.local_connect(peer_port);
+
+        // Receive 'nb_pkts' with the given payload
+        for _ in 0..nb_pkts {
+            stream.write_all(&to_recv).unwrap();
+            ctx.notify_muxer();
+            ctx.recv();
+        }
+
+        // Check that the given number of packets has been sent
+        assert_eq!(METRICS.vsock.rx_packets_count.count(), crt_rx_pkts + nb_pkts + 1);
+        // Check that for each packet the size of 'to_send' has been sent
+        assert_eq!(METRICS.vsock.rx_bytes_count.count(), crt_rx_bytes + nb_pkts * std::mem::size_of_val(&to_recv));
+    }
+
+    #[test]
+    fn test_tx_bytes_metrics() {
+        let mut ctx = MuxerTestContext::new("tx_bytes_metrics");
+        let peer_port = 1025;
+        let local_port = 1026;
+        let nb_pkts = 10; // How many of packets to send
+        let to_send = [1, 2, 3]; // What payload to send
+
+        // Get current packet and bytes count
+        let crt_tx_pkts = METRICS.vsock.tx_packets_count.count();
+        let crt_tx_bytes = METRICS.vsock.tx_bytes_count.count();
+        // Send 'nb_pkts' packets with the given payload
+        for _ in 0..nb_pkts {
+            ctx.init_data_pkt(local_port, peer_port, &to_send);
+            ctx.send();
+        }
+
+        // Check that the given number of packets has been sent
+        assert_eq!(METRICS.vsock.tx_packets_count.count(), crt_tx_pkts + nb_pkts);
+        // Check that for each packet the size of 'to_send' has been sent
+        assert_eq!(METRICS.vsock.tx_bytes_count.count(), crt_tx_bytes + nb_pkts * std::mem::size_of_val(&to_send));
+    }
+
+    #[test]
+    fn test_muxer_conn_metrics() {
+        let mut ctx = MuxerTestContext::new("muxer_conn_metrics");
+        let local_port = 1226;
+        let peer_port_first = 1025;
+        let peer_port_cnt = 10;
+        let mut listener = ctx.create_local_listener(local_port);
+
+        for peer_port in peer_port_first..peer_port_first + peer_port_cnt {
+            let crt_added = METRICS.vsock.conns_added.count();
+            // Create an OP request packet and send it
+            ctx.init_pkt(local_port, peer_port as u32, uapi::VSOCK_OP_REQUEST);
+            ctx.send();
+            // Accept the packet
+            let _stream = listener.accept();
+            ctx.recv();
+
+            // Check that the accepted count has been incremented
+            assert_eq!(METRICS.vsock.conns_added.count(), crt_added + 1);
+        }
+
+        for peer_port in peer_port_first..=peer_port_first + peer_port_cnt - 1 {
+            let crt_removed = METRICS.vsock.conns_removed.count();
+            // Create a connection shutdown request
+            ctx.init_pkt(local_port, peer_port, uapi::VSOCK_OP_SHUTDOWN)
+                .set_flag(uapi::VSOCK_FLAGS_SHUTDOWN_SEND)
+                .set_flag(uapi::VSOCK_FLAGS_SHUTDOWN_RCV);
+            ctx.send();
+            ctx.recv();
+
+            // Check that the number of removec connections has been incremented
+            assert_eq!(METRICS.vsock.conns_removed.count(), crt_removed + 1);
+        }
     }
 }

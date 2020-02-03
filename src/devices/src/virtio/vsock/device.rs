@@ -35,6 +35,7 @@ use super::super::{ActivateError, ActivateResult, Queue as VirtQueue, VirtioDevi
 use super::epoll_handler::VsockEpollHandler;
 use super::VsockBackend;
 use super::{defs, defs::uapi, EpollConfig};
+use logger::{Metric, METRICS};
 
 /// The virtio features supported by our vsock device:
 /// - VIRTIO_F_VERSION_1: the device conforms to at least version 1.0 of the VirtIO spec.
@@ -173,6 +174,7 @@ where
         )
         .map_err(ActivateError::EpollCtl)?;
 
+        //TODO ADD epoll register error here
         epoll::ctl(
             self.epoll_config.epoll_raw_fd,
             epoll::ControlOptions::EPOLL_CTL_ADD,

@@ -35,6 +35,7 @@ use super::super::VIRTIO_MMIO_INT_VRING;
 use super::defs;
 use super::packet::VsockPacket;
 use super::{EpollHandler, VsockBackend};
+use logger::{Metric, METRICS};
 
 // TODO: Detect / handle queue deadlock:
 // 1. If the driver halts RX queue processing, we'll need to notify `self.backend`, so that it
@@ -92,6 +93,7 @@ where
                 }
                 Err(e) => {
                     warn!("vsock: RX queue error: {:?}", e);
+                    METRICS.vsock.rx_queue_errors.inc();
                     0
                 }
             };
@@ -115,6 +117,7 @@ where
                 Ok(pkt) => pkt,
                 Err(e) => {
                     error!("vsock: error reading TX packet: {:?}", e);
+                    METRICS.vsock.tx_queue_errors.inc();
                     have_used = true;
                     self.txvq.add_used(&self.mem, head.index, 0);
                     continue;
@@ -149,6 +152,8 @@ where
         match device_event {
             defs::RXQ_EVENT => {
                 debug!("vsock: RX queue event");
+                METRICS.vsock.rx_queue_events.inc();
+
                 if let Err(e) = self.rxvq_evt.read() {
                     error!("Failed to get rx queue event: {:?}", e);
                     return Err(DeviceError::FailedReadingQueue {
@@ -161,6 +166,8 @@ where
             }
             defs::TXQ_EVENT => {
                 debug!("vsock: TX queue event");
+                METRICS.vsock.tx_queue_events.inc();
+
                 if let Err(e) = self.txvq_evt.read() {
                     error!("Failed to get tx queue event: {:?}", e);
                     return Err(DeviceError::FailedReadingQueue {
@@ -201,6 +208,7 @@ where
                 }
             }
             other => {
+                METRICS.vsock.epoll_io_errors.inc();
                 return Err(DeviceError::UnknownEvent {
                     device: "vsock",
                     event: other,
@@ -558,5 +566,35 @@ mod tests {
             GAP_START_ADDR as u64 - 4,
             GAP_SIZE as u32 + 100,
         );
+    }
+
+    #[test]
+    fn test_tx_queue_error_metric() {
+        let test_ctx = TestContext::new();
+        let mut ctx = test_ctx.create_epoll_handler_context();
+
+        let current_value = METRICS.vsock.tx_queue_errors.count();
+        // Invalidate the packet header descriptor, by setting its length to 0.
+        ctx.guest_txvq.dtable[0].len.set(0);
+        // Signal TX queue event
+        ctx.signal_txq_event();
+        // One TX queue error should have been triggered
+        assert_eq!(METRICS.vsock.tx_queue_errors.count(), current_value + 1);
+    }
+
+    #[test]
+    fn test_rx_queue_error_metric() {
+        let test_ctx = TestContext::new();
+        let mut ctx = test_ctx.create_epoll_handler_context();
+
+        let current_value = METRICS.vsock.rx_queue_errors.count();
+        // Invalidate the packet header descriptor, by setting its length to 0.
+        ctx.guest_rxvq.dtable[0].len.set(0);
+        // Set pending RX and process the event
+        ctx.handler.backend.set_pending_rx(true);
+        ctx.signal_rxq_event();
+
+        // One RX queue error should have been triggered
+        assert_eq!(METRICS.vsock.rx_queue_errors.count(), current_value + 1);
     }
 }

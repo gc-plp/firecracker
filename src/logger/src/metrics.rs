@@ -361,6 +361,41 @@ pub struct SignalMetrics {
     pub sigsegv: SharedMetric,
 }
 
+/// Vsock related metrics.
+#[derive(Default, Serialize)]
+pub struct VsockMetrics {
+    /// blah
+    pub rx_bytes_count: SharedMetric,
+    /// blah
+    pub tx_bytes_count: SharedMetric,
+    /// blah
+    pub rx_packets_count: SharedMetric,
+    /// blah
+    pub tx_packets_count: SharedMetric,
+    /// blah
+    pub rx_queue_errors: SharedMetric,
+    /// blah
+    pub tx_queue_errors: SharedMetric,
+    /// blah
+    pub rx_queue_events: SharedMetric,
+    /// blah
+    pub tx_queue_events: SharedMetric,
+    /// blah
+    pub conns_added: SharedMetric,
+    /// blah
+    pub conns_killed: SharedMetric,
+    /// blah
+    pub conns_removed: SharedMetric,
+    /// blah
+    pub killq_resync: SharedMetric,
+    /// blah
+    pub extra_txq_allocs: SharedMetric,
+    /// blah
+    pub epoll_io_errors: SharedMetric,
+    /// blah
+    pub epoll_register_errors: SharedMetric,
+}
+
 // The sole purpose of this struct is to produce an UTC timestamp when an instance is serialized.
 #[derive(Default)]
 struct SerializeToUtcTimestampMs;
