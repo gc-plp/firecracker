@@ -60,7 +60,7 @@ impl MemoryMapping {
                 null_mut(),
                 size,
                 libc::PROT_READ | libc::PROT_WRITE,
-                libc::MAP_ANONYMOUS | libc::MAP_SHARED | libc::MAP_NORESERVE,
+                libc::MAP_ANONYMOUS | libc::MAP_SHARED | libc::MAP_NORESERVE | libc::MAP_HUGETLB,
                 -1,
                 0,
             )
