@@ -328,6 +328,7 @@ pub fn build_microvm_for_boot(
     #[cfg(target_arch = "aarch64")]
     attach_legacy_devices_aarch64(event_manager, &mut vmm, &mut boot_cmdline).map_err(Internal)?;
 
+    println!("entry addr is {}", entry_addr.0);
     configure_system_for_boot(
         &vmm,
         vcpus.as_mut(),
@@ -336,6 +337,10 @@ pub fn build_microvm_for_boot(
         &initrd,
         boot_cmdline,
     )?;
+
+    //vmm_insert_sw_breakpoint(&vmm, entry_addr);
+    //vmm_insert_sw_breakpoint(&vmm, GuestAddress(0xffffffff810001d0));
+    vmm_insert_sw_breakpoint(&vmm, GuestAddress(0x10001d0));
 
     // Move vcpus to their own threads and start their state machine in the 'Paused' state.
     vmm.start_vcpus(vcpus, seccomp_filter).map_err(Internal)?;
@@ -770,6 +775,12 @@ fn attach_unixsock_vsock_device(
     let id = String::from(unix_vsock.lock().expect("Poisoned lock").id());
     // The device mutex mustn't be locked here otherwise it will deadlock.
     attach_virtio_device(event_manager, vmm, id, unix_vsock.clone(), cmdline)
+}
+
+fn vmm_insert_sw_breakpoint(vmm: &Vmm, addr: GuestAddress) {
+    println!("[VMM] Setting software breakpoint at {:x}", addr.0);
+
+    insert_sw_breakpoint(vmm.guest_memory(), addr);
 }
 
 #[cfg(test)]

@@ -1,0 +1,7 @@
+[package]
+name = "gdb_server"
+version = "0.0.1"
+authors = ["Amazon Firecracker team <firecracker-devel@amazon.com>"]
+
+[dependencies]
+vm-memory = { version = ">=0.2.0", features = ["backend-mmap"] }

@@ -27,6 +27,7 @@ rate_limiter = { path = "../rate_limiter" }
 seccomp = { path = "../seccomp" }
 polly = { path = "../polly" }
 snapshot = { path = "../snapshot"}
+gdb_server = { path = "../gdb_server" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 cpuid = { path = "../cpuid" }

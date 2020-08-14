@@ -136,6 +136,7 @@ where
             return Err(Error::InvalidProgramHeaderAddress);
         }
 
+        println!("Header at offset 0x{:x}", mem_offset.0);
         guest_mem
             .read_from(mem_offset, kernel_image, phdr.p_filesz as usize)
             .map_err(|_| Error::ReadKernelImage)?;
