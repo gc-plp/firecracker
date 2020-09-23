@@ -54,7 +54,7 @@ impl Persist<'_> for Queue {
             avail_ring: self.avail_ring.0,
             used_ring: self.used_ring.0,
             next_avail: self.next_avail,
-            next_used: self.next_used,
+            next_used: self.next_used
         }
     }
 
@@ -71,6 +71,8 @@ impl Persist<'_> for Queue {
             used_ring: GuestAddress::new(state.used_ring),
             next_avail: state.next_avail,
             next_used: state.next_used,
+            event_idx: false,
+            signalled_used: None,
         })
     }
 }

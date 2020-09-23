@@ -32,6 +32,7 @@ use virtio_gen::virtio_net::{
     VIRTIO_NET_F_GUEST_TSO4, VIRTIO_NET_F_GUEST_UFO, VIRTIO_NET_F_HOST_TSO4, VIRTIO_NET_F_HOST_UFO,
     VIRTIO_NET_F_MAC,
 };
+use virtio_gen::virtio_net::VIRTIO_RING_F_EVENT_IDX;
 use vm_memory::{ByteValued, Bytes, GuestAddress, GuestMemoryError, GuestMemoryMmap};
 
 fn vnet_hdr_len() -> usize {
@@ -146,7 +147,8 @@ impl Net {
             | 1 << VIRTIO_NET_F_GUEST_UFO
             | 1 << VIRTIO_NET_F_HOST_TSO4
             | 1 << VIRTIO_NET_F_HOST_UFO
-            | 1 << VIRTIO_F_VERSION_1;
+            | 1 << VIRTIO_F_VERSION_1
+            | 1 << VIRTIO_RING_F_EVENT_IDX;
 
         let mut config_space = ConfigSpace::default();
         if let Some(mac) = guest_mac {
@@ -320,6 +322,7 @@ impl Net {
         }
 
         rx_queue.add_used(mem, head_index, write_count as u32);
+        rx_queue.update_avail_event(mem);
 
         // Mark that we have at least one pending packet and we need to interrupt the guest.
         self.rx_deferred_irqs = true;
@@ -438,9 +441,21 @@ impl Net {
             }
         }
 
+        let queue = &mut self.queues[0];
+        let mem = match self.device_state {
+            DeviceState::Activated(ref mem) => mem,
+            // This should never happen, it's been already validated in the event handler.
+            DeviceState::Inactive => unreachable!(),
+        };
+
         if self.rx_deferred_irqs {
             self.rx_deferred_irqs = false;
-            self.signal_used_queue()
+            if queue.needs_notification(&mem, queue.next_used) {
+                self.signal_used_queue()
+            }
+            else {
+                Ok(())
+            }
         } else {
             Ok(())
         }
@@ -455,7 +470,21 @@ impl Net {
             self.process_rx()
         } else if self.rx_deferred_irqs {
             self.rx_deferred_irqs = false;
-            self.signal_used_queue()
+
+            let queue = &mut self.queues[0];
+            let mem = match self.device_state {
+                DeviceState::Activated(ref mem) => mem,
+                // This should never happen, it's been already validated in the event handler.
+                DeviceState::Inactive => unreachable!(),
+            };
+
+            if queue.needs_notification(&mem, queue.next_used) {
+                self.signal_used_queue()
+            }
+            else {
+                Ok(())
+            }
+
         } else {
             Ok(())
         }
@@ -558,7 +587,7 @@ impl Net {
                 &mut self.tx_rate_limiter,
                 &self.tx_frame_buf[..read_count],
                 &mut self.tap,
-                self.guest_mac,
+                self.guest_mac
             )
             .unwrap_or_else(|_| false);
             if frame_consumed_by_mmds && !self.rx_deferred_frame {
@@ -567,6 +596,7 @@ impl Net {
             }
 
             tx_queue.add_used(mem, head_index, 0);
+            tx_queue.update_avail_event(mem);
             raise_irq = true;
         }
 
@@ -779,6 +809,11 @@ impl VirtioDevice for Net {
             return Err(super::super::ActivateError::BadActivate);
         }
         self.device_state = DeviceState::Activated(mem);
+
+        let event_idx = self.acked_features & 1 << VIRTIO_RING_F_EVENT_IDX != 0;
+        self.queues[0].set_event_idx(event_idx);
+        self.queues[1].set_event_idx(event_idx);
+
         Ok(())
     }
 }

@@ -160,6 +160,12 @@ pub struct Queue {
 
     pub(crate) next_avail: Wrapping<u16>,
     pub(crate) next_used: Wrapping<u16>,
+
+    /// VIRTIO_F_RING_EVENT_IDX negotiated
+    pub event_idx: bool,
+
+    /// The last used value when using EVENT_IDX
+    pub signalled_used: Option<Wrapping<u16>>,
 }
 
 impl Queue {
@@ -174,7 +180,15 @@ impl Queue {
             used_ring: GuestAddress(0),
             next_avail: Wrapping(0),
             next_used: Wrapping(0),
+            event_idx: false,
+            signalled_used: None,
         }
+    }
+
+    pub fn set_event_idx(&mut self, enabled: bool) {
+        /* Also reset the last signalled event */
+        self.signalled_used = None;
+        self.event_idx = enabled;
     }
 
     pub fn get_max_size(&self) -> u16 {
@@ -306,6 +320,74 @@ impl Queue {
     /// The caller can use this, if it was unable to consume the last popped descriptor chain.
     pub fn undo_pop(&mut self) {
         self.next_avail -= Wrapping(1);
+    }
+
+    pub fn needs_notification(&mut self, mem: &GuestMemoryMmap, used_idx: Wrapping<u16>) -> bool {
+        if !self.event_idx {
+            return true;
+        }
+
+        let mut notify = true;
+
+        if let Some(old_idx) = self.signalled_used {
+            if let Some(used_event) = self.get_used_event(&mem) {
+                if (used_idx - used_event - Wrapping(1u16)) >= (used_idx - old_idx) {
+                    //println!("used_idx {}", used_idx);
+                    //println!("old_idx {}", old_idx);
+                    notify = false;
+                }
+            }
+        }
+
+        self.signalled_used = Some(used_idx);
+        notify
+    }
+
+    /// Update avail_event on the used ring with the last index in the avail ring.
+    pub fn update_avail_event(&mut self, mem: &GuestMemoryMmap) {
+        let index_addr = match mem.checked_offset(self.avail_ring, 2) {
+            Some(ret) => ret,
+            None => {
+                // TODO log address
+                println!("Invalid offset");
+                return;
+            }
+        };
+        // Note that last_index has no invalid values
+        let last_index: u16 = match mem.read_obj::<u16>(index_addr) {
+            Ok(ret) => ret,
+            Err(_) => return,
+        };
+
+        match mem.checked_offset(self.used_ring, (4 + self.actual_size() * 8) as usize) {
+            Some(a) => {
+                mem.write_obj(last_index, a).unwrap();
+            }
+            None => println!("Can't update avail_event"),
+        }
+
+        // This fence ensures the guest sees the value we've just written.
+        fence(Ordering::Release);
+    }
+
+    /// Return the value present in the used_event field of the avail ring.
+    #[inline(always)]
+    pub fn get_used_event(&self, mem: &GuestMemoryMmap) -> Option<Wrapping<u16>> {
+        let avail_ring = self.avail_ring;
+        let used_event_addr =
+            match mem.checked_offset(avail_ring, (4 + self.actual_size() * 2) as usize) {
+                Some(a) => a,
+                None => {
+                    return None;
+                }
+            };
+
+        // This fence ensures we're seeing the latest update from the guest.
+        fence(Ordering::SeqCst);
+        match mem.read_obj::<u16>(used_event_addr) {
+            Ok(ret) => Some(Wrapping(ret)),
+            Err(_) => None,
+        }
     }
 
     /// Puts an available descriptor head into the used ring for use by the guest.
