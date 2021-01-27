@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "Firecracker test framework"
+version = "0.1.0"
+description = ""
+authors = ["Gabriel Ionescu <gbi@amazon.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+boto3="*"
+dataclasses="*"
+nsenter="*"
+psutil="5.7.0"
+pycodestyle="*"
+pydocstyle="*"
+pylint="*"
+pytest="*"
+pytest-timeout="*"
+pyyaml="*"
+requests="*"
+requests-unixsocket="*"
+retry="*"
+typing-extensions="*"
+gitlint="*"
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
