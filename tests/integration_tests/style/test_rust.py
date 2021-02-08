@@ -2,9 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests ensuring codebase style compliance for Rust."""
 
+import pytest
 import framework.utils as utils
 
 
+@pytest.mark.concurrency('max')
 def test_rust_style():
     """Fail if there's misbehaving Rust style in this repo."""
     # Check that the output is empty.
@@ -15,6 +17,7 @@ def test_rust_style():
     assert "Diff in" not in stdout
 
 
+@pytest.mark.concurrency('max')
 def test_ensure_mod_tests():
     """Check that files containing unit tests have a 'tests' module defined."""
     # List all source files containing rust #[test] attribute,

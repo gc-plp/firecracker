@@ -29,6 +29,7 @@ signum_str = {
     "signum",
     [SIGBUS, SIGSEGV, SIGXFSZ, SIGXCPU, SIGPIPE, SIGHUP, SIGILL]
 )
+@pytest.mark.concurrency('max')
 def test_generic_signal_handler(test_microvm_with_api, signum):
     """Test signal handling for all handled signals."""
     microvm = test_microvm_with_api
@@ -66,6 +67,7 @@ def test_generic_signal_handler(test_microvm_with_api, signum):
     assert metric_line["signals"][signum_str[signum]] == 1
 
 
+@pytest.mark.concurrency('max')
 def test_sigxfsz_handler(test_microvm_with_api):
     """Test intercepting and handling SIGXFSZ."""
     microvm = test_microvm_with_api
@@ -114,6 +116,7 @@ def test_sigxfsz_handler(test_microvm_with_api):
     assert metric_line["signals"]["sigxfsz"] == 1
 
 
+@pytest.mark.concurrency('max')
 def test_handled_signals(test_microvm_with_ssh, network_config):
     """Test that handled signals don't kill the microVM."""
     microvm = test_microvm_with_ssh

@@ -13,6 +13,7 @@ import host_tools.logging as log_tools
 import host_tools.network as net_tools
 
 
+@pytest.mark.concurrency('max')
 def test_api_happy_start(test_microvm_with_api):
     """Test a regular microvm API start sequence."""
     test_microvm = test_microvm_with_api
@@ -25,6 +26,7 @@ def test_api_happy_start(test_microvm_with_api):
     test_microvm.start()
 
 
+@pytest.mark.concurrency('max')
 def test_api_put_update_pre_boot(test_microvm_with_api):
     """Test that PUT updates are allowed before the microvm boots."""
     test_microvm = test_microvm_with_api
@@ -144,6 +146,7 @@ def test_api_put_update_pre_boot(test_microvm_with_api):
     assert response_json['track_dirty_pages'] == track_dirty_pages
 
 
+@pytest.mark.concurrency('max')
 def test_net_api_put_update_pre_boot(test_microvm_with_api):
     """Test PUT updates on network configurations before the microvm boots."""
     test_microvm = test_microvm_with_api
@@ -211,6 +214,7 @@ def test_net_api_put_update_pre_boot(test_microvm_with_api):
     assert test_microvm.api_session.is_status_no_content(response.status_code)
 
 
+@pytest.mark.concurrency('max')
 def test_api_put_machine_config(test_microvm_with_api):
     """Test /machine_config PUT scenarios that unit tests can't cover."""
     test_microvm = test_microvm_with_api
@@ -259,6 +263,7 @@ def test_api_put_machine_config(test_microvm_with_api):
         assert "CPU templates are not supported on aarch64" in response.text
 
 
+@pytest.mark.concurrency('max')
 def test_api_put_update_post_boot(test_microvm_with_api):
     """Test that PUT updates are rejected after the microvm boots."""
     test_microvm = test_microvm_with_api
@@ -327,6 +332,7 @@ def test_api_put_update_post_boot(test_microvm_with_api):
     assert expected_err in response.text
 
 
+@pytest.mark.concurrency('max')
 def test_rate_limiters_api_config(test_microvm_with_api):
     """Test the Firecracker IO rate limiter API."""
     test_microvm = test_microvm_with_api
@@ -470,6 +476,7 @@ def test_rate_limiters_api_config(test_microvm_with_api):
     assert test_microvm.api_session.is_status_no_content(response.status_code)
 
 
+@pytest.mark.concurrency('max')
 def test_api_patch_pre_boot(test_microvm_with_api):
     """Tests PATCH updates before the microvm boots."""
     test_microvm = test_microvm_with_api
@@ -546,6 +553,7 @@ def test_api_patch_pre_boot(test_microvm_with_api):
            "microVM." in response.text
 
 
+@pytest.mark.concurrency('max')
 def test_api_patch_post_boot(test_microvm_with_api):
     """Test PATCH updates after the microvm boots."""
     test_microvm = test_microvm_with_api
@@ -607,6 +615,7 @@ def test_api_patch_post_boot(test_microvm_with_api):
     assert "Invalid request method" in response.text
 
 
+@pytest.mark.concurrency('max')
 def test_drive_patch(test_microvm_with_api):
     """Test drive PATCH before and after boot."""
     test_microvm = test_microvm_with_api
@@ -646,6 +655,7 @@ def test_drive_patch(test_microvm_with_api):
     platform.machine() != "x86_64",
     reason="not yet implemented on aarch64"
 )
+@pytest.mark.concurrency('max')
 def test_send_ctrl_alt_del(test_microvm_with_api):
     """Test shutting down the microVM gracefully, by sending CTRL+ALT+DEL.
 
@@ -784,6 +794,7 @@ def _drive_patch(test_microvm):
     assert "No such file or directory" in response.text
 
 
+@pytest.mark.concurrency('max')
 def test_api_vsock(test_microvm_with_api):
     """Test vsock related API commands."""
     test_microvm = test_microvm_with_api
@@ -835,6 +846,7 @@ def test_api_vsock(test_microvm_with_api):
     assert "Diff snapshots are not allowed on uVMs with vsock" in response.text
 
 
+@pytest.mark.concurrency('max')
 def test_api_balloon(test_microvm_with_ssh_and_balloon):
     """Test balloon related API commands."""
     test_microvm = test_microvm_with_ssh_and_balloon

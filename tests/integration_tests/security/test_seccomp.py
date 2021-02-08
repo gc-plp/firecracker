@@ -3,10 +3,12 @@
 """Tests that the seccomp filters don't let blacklisted syscalls through."""
 
 import os
+import pytest
 
 import framework.utils as utils
 
 
+@pytest.mark.concurrency('max')
 def test_seccomp_ls(bin_seccomp_paths):
     """Assert that the seccomp filters deny a blacklisted syscall."""
     # pylint: disable=redefined-outer-name
@@ -30,6 +32,7 @@ def test_seccomp_ls(bin_seccomp_paths):
     assert outcome.returncode != 0
 
 
+@pytest.mark.concurrency('max')
 def test_advanced_seccomp_harmless(bin_seccomp_paths):
     """
     Test `demo_harmless`.
@@ -54,6 +57,7 @@ def test_advanced_seccomp_harmless(bin_seccomp_paths):
     assert outcome.returncode == 0
 
 
+@pytest.mark.concurrency('max')
 def test_advanced_seccomp_malicious(bin_seccomp_paths):
     """
     Test `demo_malicious`.
@@ -78,6 +82,7 @@ def test_advanced_seccomp_malicious(bin_seccomp_paths):
     assert outcome.returncode == -31
 
 
+@pytest.mark.concurrency('max')
 def test_seccomp_applies_to_all_threads(test_microvm_with_api):
     """Test all Firecracker threads get default seccomp level 2."""
     test_microvm = test_microvm_with_api

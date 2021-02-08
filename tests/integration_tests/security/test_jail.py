@@ -3,6 +3,7 @@
 """Tests that verify the jailer's behavior."""
 import os
 import stat
+import pytest
 
 from framework.defs import FC_BINARY_NAME
 
@@ -26,6 +27,7 @@ def check_stats(filepath, stats, uid, gid):
     assert st.st_mode ^ stats == 0
 
 
+@pytest.mark.concurrency('max')
 def test_default_chroot(test_microvm_with_ssh):
     """Test that the code base assigns a chroot if none is specified."""
     test_microvm = test_microvm_with_ssh
@@ -40,6 +42,7 @@ def test_default_chroot(test_microvm_with_ssh):
     assert os.path.exists(test_microvm.jailer.api_socket_path())
 
 
+@pytest.mark.concurrency('max')
 def test_empty_jailer_id(test_microvm_with_ssh):
     """Test that the jailer ID cannot be empty."""
     test_microvm = test_microvm_with_ssh
@@ -60,6 +63,7 @@ def test_empty_jailer_id(test_microvm_with_ssh):
         assert expected_err in str(err)
 
 
+@pytest.mark.concurrency('max')
 def test_default_chroot_hierarchy(test_microvm_with_initrd):
     """Test the folder hierarchy created by default by the jailer."""
     test_microvm = test_microvm_with_initrd
@@ -84,6 +88,7 @@ def test_default_chroot_hierarchy(test_microvm_with_initrd):
                              "firecracker"), FILE_STATS, 0, 0)
 
 
+@pytest.mark.concurrency('max')
 def test_arbitrary_usocket_location(test_microvm_with_initrd):
     """Test arbitrary location scenario for the api socket."""
     test_microvm = test_microvm_with_initrd
@@ -122,6 +127,7 @@ def get_cpus(node):
     return open(node_cpus_path, 'r').readline().strip()
 
 
+@pytest.mark.concurrency('max')
 def test_cgroups(test_microvm_with_initrd):
     """Test the cgroups are correctly set by the jailer."""
     test_microvm = test_microvm_with_initrd
@@ -147,6 +153,7 @@ def test_cgroups(test_microvm_with_initrd):
     check_cgroups(cgroups, sys_cgroup, test_microvm.jailer.jailer_id)
 
 
+@pytest.mark.concurrency('max')
 def test_node_cgroups(test_microvm_with_initrd):
     """Test the cgroups are correctly set by the jailer."""
     test_microvm = test_microvm_with_initrd
@@ -172,6 +179,7 @@ def test_node_cgroups(test_microvm_with_initrd):
     check_cgroups(cgroups, sys_cgroup, test_microvm.jailer.jailer_id)
 
 
+@pytest.mark.concurrency('max')
 def test_args_cgroups(test_microvm_with_initrd):
     """Test the cgroups are correctly set by the jailer."""
     test_microvm = test_microvm_with_initrd

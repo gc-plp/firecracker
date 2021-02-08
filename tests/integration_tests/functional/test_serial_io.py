@@ -6,6 +6,7 @@ import fcntl
 import os
 import termios
 import time
+import pytest
 
 from framework.microvm import Serial
 from framework.state_machine import TestState
@@ -56,6 +57,7 @@ class TestFinished(TestState):  # pylint: disable=too-few-public-methods
         return self
 
 
+@pytest.mark.concurrency('max')
 def test_serial_console_login(test_microvm_with_ssh):
     """Test serial console login."""
     microvm = test_microvm_with_ssh
@@ -102,6 +104,7 @@ def send_bytes(tty, bytes_count, timeout=60):
             break
 
 
+@pytest.mark.concurrency('max')
 def test_serial_dos(test_microvm_with_ssh):
     """Test serial console behavior under DoS."""
     microvm = test_microvm_with_ssh

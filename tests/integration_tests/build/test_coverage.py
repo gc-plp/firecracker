@@ -42,6 +42,7 @@ KCOV_TOTAL_LINES_REGEX = r'"total_lines" : "(\d+)"'
 
 
 @pytest.mark.timeout(400)
+@pytest.mark.concurrency('max')
 def test_coverage(test_fc_session_root_path, test_session_tmp_path):
     """Test line coverage with kcov.
 

@@ -3,9 +3,11 @@
 """Tests ensuring desired style for commit messages."""
 
 import os
+import pytest
 import framework.utils as utils
 
 
+@pytest.mark.concurrency('max')
 def test_gitlint():
     """Fail if the default gitlint rules do not apply."""
     os.environ['LC_ALL'] = 'C.UTF-8'

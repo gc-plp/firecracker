@@ -43,6 +43,7 @@ BINARY_SIZE_TOLERANCE = 0.05
 
 
 @pytest.mark.timeout(500)
+@pytest.mark.concurrency('max')
 def test_binary_sizes():
     """Test if the sizes of the release binaries are within expected ranges."""
     fc_binary, jailer_binary = host.get_firecracker_binaries()

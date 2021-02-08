@@ -4,9 +4,11 @@
 
 import os
 import json
+import pytest
 import host_tools.logging as log_tools
 
 
+@pytest.mark.concurrency('max')
 def test_flush_metrics(test_microvm_with_api):
     """Check the `FlushMetrics` vmm action."""
     microvm = test_microvm_with_api

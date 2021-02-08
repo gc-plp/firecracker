@@ -15,6 +15,7 @@ DMESG_LOG_REGEX = r'rtc-pl031\s+(\d+).rtc: setting system clock to'
     platform.machine() != "aarch64",
     reason="RTC exists only on aarch64."
 )
+@pytest.mark.concurrency('max')
 def test_rtc(test_microvm_with_ssh, network_config):
     """Test RTC functionality on aarch64."""
     vm = test_microvm_with_ssh

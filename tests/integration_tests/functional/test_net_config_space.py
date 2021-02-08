@@ -9,6 +9,7 @@ import string
 from threading import Thread
 import subprocess
 import platform
+import pytest
 
 import host_tools.logging as log_tools
 import host_tools.network as net_tools  # pylint: disable=import-error
@@ -17,6 +18,7 @@ import host_tools.network as net_tools  # pylint: disable=import-error
 PAYLOAD_DATA_SIZE = 20
 
 
+@pytest.mark.concurrency('max')
 def test_net_change_mac_address(test_microvm_with_ssh, network_config,
                                 change_net_config_space_bin):
     """Test changing the MAC address of the network device."""

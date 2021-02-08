@@ -43,6 +43,7 @@ def _configure_vm_from_json(test_microvm, vm_config_file):
     "vm_config_file",
     ["framework/vm_config.json"]
 )
+@pytest.mark.concurrency('max')
 def test_config_start_with_api(test_microvm_with_ssh, vm_config_file):
     """Test if a microvm configured from file boots successfully."""
     test_microvm = test_microvm_with_ssh
@@ -58,6 +59,7 @@ def test_config_start_with_api(test_microvm_with_ssh, vm_config_file):
     "vm_config_file",
     ["framework/vm_config.json"]
 )
+@pytest.mark.concurrency('max')
 def test_config_start_no_api(test_microvm_with_ssh, vm_config_file):
     """Test microvm start when API server thread is disabled."""
     test_microvm = test_microvm_with_ssh

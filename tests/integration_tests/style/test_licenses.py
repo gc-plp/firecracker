@@ -3,6 +3,7 @@
 """Tests checking against the existence of licenses in each file."""
 
 import datetime
+import pytest
 import framework.utils as utils
 
 AMAZON_COPYRIGHT_YEARS = range(2018, datetime.datetime.now().year + 1)
@@ -90,6 +91,7 @@ def _validate_license(filename):
     return True
 
 
+@pytest.mark.concurrency('max')
 def test_for_valid_licenses():
     """Fail if a file lacks a valid license."""
     python_files = utils.get_files_from(

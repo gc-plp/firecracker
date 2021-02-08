@@ -2,9 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests ensuring codebase style compliance for Python."""
 
+import pytest
 import framework.utils as utils
 
 
+@pytest.mark.concurrency('max')
 def test_python_style():
     """Fail if there's misbehaving Python style in the test system."""
     # List of linter commands that should be executed for each file

@@ -13,6 +13,7 @@ from framework.utils import wait_process_termination
     reason="The error code returned on aarch64 will not be returned on x86 "
            "under the same conditions."
 )
+@pytest.mark.concurrency('max')
 def test_enosys_error_code(test_microvm_with_initrd):
     """Test that ENOSYS error is caught and firecracker exits gracefully."""
     # On aarch64 we trigger this error by adding to initrd a C program that

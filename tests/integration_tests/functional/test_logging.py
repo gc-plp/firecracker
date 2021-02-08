@@ -10,6 +10,8 @@ import re
 
 from time import strptime
 
+import pytest
+
 import host_tools.logging as log_tools
 
 
@@ -71,6 +73,7 @@ def check_log_message_format(log_str, instance_id, level, show_level,
         assert tag_level_no <= configured_level_no
 
 
+@pytest.mark.concurrency('max')
 def test_no_origin_logs(test_microvm_with_ssh):
     """Check that logs do not contain the origin (i.e file and line number)."""
     _test_log_config(
@@ -80,6 +83,7 @@ def test_no_origin_logs(test_microvm_with_ssh):
     )
 
 
+@pytest.mark.concurrency('max')
 def test_no_level_logs(test_microvm_with_ssh):
     """Check that logs do not contain the level."""
     _test_log_config(
@@ -89,6 +93,7 @@ def test_no_level_logs(test_microvm_with_ssh):
     )
 
 
+@pytest.mark.concurrency('max')
 def test_no_nada_logs(test_microvm_with_ssh):
     """Check that logs do not contain either level or origin."""
     _test_log_config(
@@ -98,11 +103,13 @@ def test_no_nada_logs(test_microvm_with_ssh):
     )
 
 
+@pytest.mark.concurrency('max')
 def test_info_logs(test_microvm_with_ssh):
     """Check output of logs when minimum level to be displayed is info."""
     _test_log_config(microvm=test_microvm_with_ssh)
 
 
+@pytest.mark.concurrency('max')
 def test_warn_logs(test_microvm_with_ssh):
     """Check output of logs when minimum level to be displayed is warning."""
     _test_log_config(
@@ -111,6 +118,7 @@ def test_warn_logs(test_microvm_with_ssh):
     )
 
 
+@pytest.mark.concurrency('max')
 def test_error_logs(test_microvm_with_ssh):
     """Check output of logs when minimum level of logs displayed is error."""
     _test_log_config(
@@ -119,6 +127,7 @@ def test_error_logs(test_microvm_with_ssh):
     )
 
 
+@pytest.mark.concurrency('max')
 def test_log_config_failure(test_microvm_with_api):
     """Check passing invalid FIFOs is detected and reported as an error."""
     microvm = test_microvm_with_api
@@ -135,6 +144,7 @@ def test_log_config_failure(test_microvm_with_api):
     assert response.json()['fault_message']
 
 
+@pytest.mark.concurrency('max')
 def test_api_requests_logs(test_microvm_with_api):
     """Test that API requests are logged."""
     microvm = test_microvm_with_api

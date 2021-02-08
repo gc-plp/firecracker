@@ -3,6 +3,7 @@
 """Tests ensuring codebase style compliance for the OpenAPI specification."""
 
 import os
+import pytest
 import yaml
 import framework.utils as utils
 
@@ -27,6 +28,7 @@ def validate_swagger(swagger_spec):
     assert retcode == 0
 
 
+@pytest.mark.concurrency('max')
 def test_firecracker_swagger():
     """Fail if Firecracker swagger specification is malformed."""
     swagger_spec = os.path.normpath(

@@ -15,6 +15,7 @@ PARTUUID = {"x86_64": "0eaa91a0-01", "aarch64": "7bf14469-01"}
 MB = 1024 * 1024
 
 
+@pytest.mark.concurrency('max')
 def test_rescan_file(test_microvm_with_ssh, network_config):
     """Verify that rescan works with a file-backed virtio device."""
     test_microvm = test_microvm_with_ssh
@@ -67,6 +68,7 @@ def test_rescan_file(test_microvm_with_ssh, network_config):
     )
 
 
+@pytest.mark.concurrency('max')
 def test_device_ordering(test_microvm_with_ssh, network_config):
     """Verify device ordering.
 
@@ -128,6 +130,7 @@ def test_device_ordering(test_microvm_with_ssh, network_config):
     _check_block_size(ssh_connection, '/dev/vdc', fs2.size())
 
 
+@pytest.mark.concurrency('max')
 def test_rescan_dev(test_microvm_with_ssh, network_config):
     """Verify that rescan works with a device-backed virtio device."""
     test_microvm = test_microvm_with_ssh
@@ -182,6 +185,7 @@ def test_rescan_dev(test_microvm_with_ssh, network_config):
             utils.run_cmd(['losetup', '--detach', loopback_device])
 
 
+@pytest.mark.concurrency('max')
 def test_non_partuuid_boot(test_microvm_with_ssh, network_config):
     """Test the output reported by blockdev when booting from /dev/vda."""
     test_microvm = test_microvm_with_ssh
@@ -220,6 +224,7 @@ def test_non_partuuid_boot(test_microvm_with_ssh, network_config):
     _check_drives(test_microvm, assert_dict, keys_array)
 
 
+@pytest.mark.concurrency('max')
 def test_partuuid_boot(test_microvm_with_partuuid, network_config):
     """Test the output reported by blockdev when booting with PARTUUID."""
     test_microvm = test_microvm_with_partuuid
@@ -254,6 +259,7 @@ def test_partuuid_boot(test_microvm_with_partuuid, network_config):
     _check_drives(test_microvm, assert_dict, keys_array)
 
 
+@pytest.mark.concurrency('max')
 def test_partuuid_update(test_microvm_with_ssh, network_config):
     """Test successful switching from PARTUUID boot to /dev/vda boot."""
     test_microvm = test_microvm_with_ssh
@@ -294,6 +300,7 @@ def test_partuuid_update(test_microvm_with_ssh, network_config):
     _check_drives(test_microvm, assert_dict, keys_array)
 
 
+@pytest.mark.concurrency('max')
 def test_patch_drive(test_microvm_with_ssh, network_config):
     """Test replacing the backing filesystem after guest boot works."""
     test_microvm = test_microvm_with_ssh
@@ -363,6 +370,7 @@ def check_iops_limit(ssh_connection, block_size, count, min_time, max_time):
     assert float(tokens[7]) < max_time
 
 
+@pytest.mark.concurrency('max')
 def test_patch_drive_limiter(test_microvm_with_ssh, network_config):
     """Test replacing the drive rate-limiter after guest boot works."""
     test_microvm = test_microvm_with_ssh

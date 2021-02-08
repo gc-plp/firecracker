@@ -47,6 +47,7 @@ def _check_cpu_features_arm(test_microvm):
     "htt",
     [True, False],
 )
+@pytest.mark.concurrency('max')
 def test_cpuid(test_microvm_with_ssh, network_config, num_vcpus, htt):
     """Check the CPUID for a microvm with the specified config."""
     vm = test_microvm_with_ssh
@@ -61,6 +62,7 @@ def test_cpuid(test_microvm_with_ssh, network_config, num_vcpus, htt):
     PLATFORM != "aarch64",
     reason="The CPU features on x86 are tested as part of the CPU templates."
 )
+@pytest.mark.concurrency('max')
 def test_cpu_features(test_microvm_with_ssh, network_config):
     """Check the CPU features for a microvm with the specified config."""
     vm = test_microvm_with_ssh
@@ -75,6 +77,7 @@ def test_cpu_features(test_microvm_with_ssh, network_config):
     PLATFORM != "x86_64",
     reason="The CPU brand string is masked only on x86_64."
 )
+@pytest.mark.concurrency('max')
 def test_brand_string(test_microvm_with_ssh, network_config):
     """Ensure good formatting for the guest band string.
 
@@ -136,6 +139,7 @@ def test_brand_string(test_microvm_with_ssh, network_config):
     reason="CPU features are masked only on x86_64."
 )
 @pytest.mark.parametrize("cpu_template", ["T2", "C3"])
+@pytest.mark.concurrency('max')
 def test_cpu_template(test_microvm_with_ssh, network_config, cpu_template):
     """Check that AVX2 & AVX512 instructions are disabled.
 

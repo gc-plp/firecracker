@@ -5,6 +5,7 @@
 import json
 import random
 import string
+import pytest
 import host_tools.network as net_tools
 
 
@@ -13,6 +14,7 @@ def _assert_out(stdout, stderr, expected):
     assert stdout.read() == expected
 
 
+@pytest.mark.concurrency('max')
 def test_custom_ipv4(test_microvm_with_ssh, network_config):
     """Test the API for MMDS custom ipv4 support."""
     test_microvm = test_microvm_with_ssh
@@ -113,6 +115,7 @@ def test_custom_ipv4(test_microvm_with_ssh, network_config):
     assert json.load(stdout) == data_store['latest']['meta-data']
 
 
+@pytest.mark.concurrency('max')
 def test_json_response(test_microvm_with_ssh, network_config):
     """Test the MMDS json response."""
     test_microvm = test_microvm_with_ssh
@@ -184,6 +187,7 @@ def test_json_response(test_microvm_with_ssh, network_config):
     assert json.load(stdout) == 512
 
 
+@pytest.mark.concurrency('max')
 def test_imds_response(test_microvm_with_ssh, network_config):
     """Test the MMDS IMDS response."""
     test_microvm = test_microvm_with_ssh
@@ -270,6 +274,7 @@ def test_imds_response(test_microvm_with_ssh, network_config):
                                 ' unsupported type.')
 
 
+@pytest.mark.concurrency('max')
 def test_larger_than_mss_payloads(test_microvm_with_ssh, network_config):
     """Test MMDS content for payloads larger than MSS."""
     test_microvm = test_microvm_with_ssh
@@ -342,6 +347,7 @@ def test_larger_than_mss_payloads(test_microvm_with_ssh, network_config):
     _assert_out(stdout, stderr, lower_than_mss)
 
 
+@pytest.mark.concurrency('max')
 def test_mmds_dummy(test_microvm_with_ssh):
     """Test the API and guest facing features of the Micro MetaData Service."""
     test_microvm = test_microvm_with_ssh
@@ -395,6 +401,7 @@ def test_mmds_dummy(test_microvm_with_ssh):
     assert response.json() == dummy_json
 
 
+@pytest.mark.concurrency('max')
 def test_guest_mmds_hang(test_microvm_with_ssh, network_config):
     """Test the MMDS json response."""
     test_microvm = test_microvm_with_ssh

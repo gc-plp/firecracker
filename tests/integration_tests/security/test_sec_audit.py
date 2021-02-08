@@ -15,6 +15,7 @@ import framework.utils as utils
     reason="The audit is based on cargo.lock which "
            "is identical on all platforms"
 )
+@pytest.mark.concurrency('max')
 def test_cargo_audit():
     """Fail if there are crates with security vulnerabilities."""
     cargo_lock_path = os.path.normpath(

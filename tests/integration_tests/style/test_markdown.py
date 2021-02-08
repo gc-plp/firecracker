@@ -2,9 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for markdown style checks."""
 
+import pytest
 import framework.utils as utils
 
 
+@pytest.mark.concurrency('max')
 def test_markdown_style():
     """Fail if there's misbehaving markdown style in the test system."""
     # Get all *.md files from the project

@@ -17,6 +17,7 @@ TARGETS = ["{}-unknown-linux-gnu".format(MACHINE),
     "target",
     TARGETS
 )
+@pytest.mark.concurrency('max')
 def test_rust_clippy(target):
     """Fails if clippy generates any error, warnings are ignored."""
     utils.run_cmd(
