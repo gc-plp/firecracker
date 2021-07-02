@@ -273,7 +273,7 @@ impl VsockEpollListener for VsockMuxer {
     /// Get the epoll events to be polled upstream.
     ///
     /// Since the polled FD is a nested epoll FD, we're only interested in EPOLLIN events (i.e.
-    /// some event occured on one of the FDs registered under our epoll FD).
+    /// some event occurred on one of the FDs registered under our epoll FD).
     fn get_polled_evset(&self) -> EventSet {
         EventSet::IN
     }
@@ -327,30 +327,29 @@ impl VsockMuxer {
             local_port_set: HashSet::with_capacity(defs::MAX_CONNECTIONS),
         };
 
-        // Listen on the host initiated socket, for incomming connections.
+        // Listen on the host initiated socket, for incoming connections.
         muxer.add_listener(muxer.host_sock.as_raw_fd(), EpollListener::HostSock)?;
         Ok(muxer)
     }
 
     /// Handle/dispatch an epoll event to its listener.
-    fn handle_event(&mut self, fd: RawFd, evset: EventSet) {
+    fn handle_event(&mut self, fd: RawFd, event_set: EventSet) {
         debug!(
             "vsock: muxer processing event: fd={}, evset={:?}",
-            fd, evset
+            fd, event_set
         );
 
         match self.listener_map.get_mut(&fd) {
             // This event needs to be forwarded to a `MuxerConnection` that is listening for
             // it.
-            Some(EpollListener::Connection { key, evset }) => {
+            Some(EpollListener::Connection { key, evset: _ }) => {
                 let key_copy = *key;
-                let evset_copy = *evset;
                 // The handling of this event will most probably mutate the state of the
-                // receiving conection. We'll need to check for new pending RX, event set
+                // receiving connection. We'll need to check for new pending RX, event set
                 // mutation, and all that, so we're wrapping the event delivery inside those
                 // checks.
                 self.apply_conn_mutation(key_copy, |conn| {
-                    conn.notify(evset_copy);
+                    conn.notify(event_set);
                 });
             }
 
@@ -412,7 +411,10 @@ impl VsockMuxer {
             }
 
             _ => {
-                info!("vsock: unexpected event: fd={:?}, evset={:?}", fd, evset);
+                info!(
+                    "vsock: unexpected event: fd={:?}, evset={:?}",
+                    fd, event_set
+                );
                 METRICS.vsock.muxer_event_fails.inc();
             }
         }
@@ -973,6 +975,24 @@ mod tests {
         let ctx = MuxerTestContext::new("muxer_epoll_listener");
         assert_eq!(ctx.muxer.as_raw_fd(), ctx.muxer.epoll.as_raw_fd());
         assert_eq!(ctx.muxer.get_polled_evset(), EventSet::IN);
+    }
+
+    #[test]
+    fn test_muxer_epoll_listener_regression() {
+        let mut ctx = MuxerTestContext::new("muxer_epoll_listener");
+        ctx.local_connect(1025);
+
+        let (_, conn) = ctx.muxer.conn_map.iter().next().unwrap();
+
+        assert_eq!(conn.get_polled_evset(), EventSet::IN);
+
+        assert_eq!(METRICS.vsock.conn_event_fails.count(), 0);
+
+        let conn_eventfd = conn.as_raw_fd();
+
+        (&mut ctx.muxer).handle_event(conn_eventfd, EventSet::OUT);
+
+        assert_eq!(METRICS.vsock.conn_event_fails.count(), 1);
     }
 
     #[test]
